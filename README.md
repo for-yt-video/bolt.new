@@ -21,6 +21,7 @@ Bolt.new is an AI-powered web development agent that allows you to prompt, run, 
 - [ ] Add models load via json file along with api url
 - [ ] Add the ability to pass the system prompt though the headers
 - [ ] Add a test llm provider type for development testing
+- [ ] Add a option to fix error during generation
 - [ ] Super simple setting menu modal
 - [ ] In base chat add 2 dropdown (model, system prompt)
 - [ ] Remove all warnings
