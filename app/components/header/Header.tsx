@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { ClientOnly } from 'remix-utils/client-only';
+import { useEffect } from 'react';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
 import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 import { chatStore } from '~/lib/stores/chat';
@@ -7,6 +8,17 @@ import { classNames } from '~/utils/classNames';
 
 export function Header() {
   const chat = useStore(chatStore);
+
+  useEffect(() => {
+    if (chat.started) {
+      // Get the chat description element's text content
+      const descriptionElement = document.querySelector('[data-chat-description]');
+      const chatName = descriptionElement?.textContent || 'Bolt';
+      document.title = chatName;
+    } else {
+      document.title = 'Bolt';
+    }
+  }, [chat.started]);
 
   return (
     <header
@@ -19,7 +31,6 @@ export function Header() {
       )}
     >
       <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary cursor-pointer">
-        <div className="i-ph:sidebar-simple-duotone text-xl" />
         <a href="/" className="text-2xl font-semibold text-accent flex items-center">
           <span className="i-bolt:logo-text?mask w-[46px] inline-block" />
         </a>

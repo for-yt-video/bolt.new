@@ -13,7 +13,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
 
   return (
     <div className="flex">
-      <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden">
+      <div className="flex border border-bolt-elements-borderColor rounded-md">
         <Button
           active={showChat}
           disabled={!canHideChat}
@@ -23,7 +23,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
             }
           }}
         >
-          <div className="i-bolt:chat text-sm" />
+          <div className="i-ph:chat-circle text-sm" />
         </Button>
         <div className="w-[1px] bg-bolt-elements-borderColor" />
         <Button
