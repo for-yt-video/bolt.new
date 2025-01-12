@@ -1,14 +1,13 @@
 import { motion, type Variants } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
+import { HistoryItem } from './HistoryItem';
+import { binDates } from './date-binning';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
-import { IconButton } from '~/components/ui/IconButton';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
 import { db, deleteById, getAll, chatId, type ChatHistoryItem, setMessages } from '~/lib/persistence';
 import { cubicEasingFn } from '~/utils/easings';
 import { logger } from '~/utils/logger';
-import { HistoryItem } from './HistoryItem';
-import { binDates } from './date-binning';
 
 const menuVariants = {
   closed: {
@@ -31,10 +30,7 @@ const menuVariants = {
   },
 } satisfies Variants;
 
-type DialogContent = 
-  | { type: 'delete'; item: ChatHistoryItem }
-  | { type: 'rename'; item: ChatHistoryItem }
-  | null;
+type DialogContent = { type: 'delete'; item: ChatHistoryItem } | { type: 'rename'; item: ChatHistoryItem } | null;
 
 export function Menu() {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -93,7 +89,7 @@ export function Menu() {
     const exportData = {
       description: item.description,
       messages: item.messages,
-      timestamp: item.timestamp
+      timestamp: item.timestamp,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -105,7 +101,7 @@ export function Menu() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast.success('Chat exported successfully');
   }, []);
 
@@ -161,9 +157,9 @@ export function Menu() {
                   {category}
                 </div>
                 {items.map((item) => (
-                  <HistoryItem 
-                    key={item.id} 
-                    item={item} 
+                  <HistoryItem
+                    key={item.id}
+                    item={item}
                     onDelete={() => setDialogContent({ type: 'delete', item })}
                     onRename={() => {
                       setNewName(item.description || '');

@@ -17,14 +17,14 @@ import {
   type Tooltip,
 } from '@codemirror/view';
 import { memo, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import type { Theme } from '~/types/theme';
-import { classNames } from '~/utils/classNames';
-import { debounce } from '~/utils/debounce';
-import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { BinaryContent } from './BinaryContent';
 import { getTheme, reconfigureTheme } from './cm-theme';
 import { indentKeyBinding } from './indent';
 import { getLanguage } from './languages';
+import type { Theme } from '~/types/theme';
+import { classNames } from '~/utils/classNames';
+import { debounce } from '~/utils/debounce';
+import { createScopedLogger, renderLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('CodeMirrorEditor');
 
@@ -135,10 +135,10 @@ export const CodeMirrorEditor = memo(
     const [languageCompartment] = useState(new Compartment());
 
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const viewRef = useRef<EditorView>();
-    const themeRef = useRef<Theme>();
-    const docRef = useRef<EditorDocument>();
-    const editorStatesRef = useRef<EditorStates>();
+    const viewRef = useRef<EditorView | null>(null);
+    const themeRef = useRef<Theme | null>(null);
+    const docRef = useRef<EditorDocument | null>(null);
+    const editorStatesRef = useRef<EditorStates | null>(null);
     const onScrollRef = useRef(onScroll);
     const onChangeRef = useRef(onChange);
     const onSaveRef = useRef(onSave);
@@ -151,7 +151,7 @@ export const CodeMirrorEditor = memo(
       onScrollRef.current = onScroll;
       onChangeRef.current = onChange;
       onSaveRef.current = onSave;
-      docRef.current = doc;
+      docRef.current = doc ?? null;
       themeRef.current = theme;
     });
 
@@ -188,7 +188,7 @@ export const CodeMirrorEditor = memo(
 
       return () => {
         viewRef.current?.destroy();
-        viewRef.current = undefined;
+        viewRef.current = null;
       };
     }, []);
 

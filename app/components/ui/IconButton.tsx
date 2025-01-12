@@ -1,77 +1,51 @@
+import type { ButtonHTMLAttributes } from 'react';
 import { memo } from 'react';
 import { classNames } from '~/utils/classNames';
 
 type IconSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
-interface BaseIconButtonProps {
+interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: string;
   size?: IconSize;
-  className?: string;
+  children?: React.ReactNode | React.ReactNode[];
   iconClassName?: string;
   disabledClassName?: string;
-  title?: string;
-  disabled?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
 }
 
-type IconButtonWithoutChildrenProps = {
-  icon: string;
-  children?: undefined;
-} & BaseIconButtonProps;
-
-type IconButtonWithChildrenProps = {
-  icon?: undefined;
-  children: string | JSX.Element | JSX.Element[];
-} & BaseIconButtonProps;
-
-type IconButtonProps = IconButtonWithoutChildrenProps | IconButtonWithChildrenProps;
+const sizeToClassName: Record<IconSize, string> = {
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-lg',
+  xl: 'text-xl',
+  xxl: 'text-2xl',
+};
 
 export const IconButton = memo(
   ({
     icon,
-    size = 'xl',
+    size = 'md',
     className,
     iconClassName,
     disabledClassName,
-    disabled = false,
-    title,
-    onClick,
+    disabled,
     children,
+    ...props
   }: IconButtonProps) => {
     return (
       <button
+        type="button"
         className={classNames(
-          'flex items-center text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed',
-          {
-            [classNames('opacity-30', disabledClassName)]: disabled,
-          },
+          'flex items-center gap-2 rounded-md px-2 py-1 text-bolt-text-primary transition-colors duration-200 hover:bg-bolt-elements-background-depth-1 active:bg-bolt-elements-background-depth-2 disabled:cursor-not-allowed disabled:opacity-50',
+          sizeToClassName[size],
           className,
+          disabled ? disabledClassName : undefined,
         )}
-        title={title}
         disabled={disabled}
-        onClick={(event) => {
-          if (disabled) {
-            return;
-          }
-
-          onClick?.(event);
-        }}
+        {...props}
       >
-        {children ? children : <div className={classNames(icon, getIconSize(size), iconClassName)}></div>}
+        <div className={classNames(icon, iconClassName)} />
+        {children}
       </button>
     );
   },
 );
-
-function getIconSize(size: IconSize) {
-  if (size === 'sm') {
-    return 'text-sm';
-  } else if (size === 'md') {
-    return 'text-md';
-  } else if (size === 'lg') {
-    return 'text-lg';
-  } else if (size === 'xl') {
-    return 'text-xl';
-  } else {
-    return 'text-2xl';
-  }
-}
