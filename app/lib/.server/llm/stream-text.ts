@@ -22,10 +22,10 @@ export type Messages = Message[];
 
 export type StreamingOptions = Omit<Parameters<typeof _streamText>[0], 'model'>;
 
-export function streamText(messages: Messages, env: Env, options?: StreamingOptions) {
+export function streamText(messages: Messages, env: Env, options?: StreamingOptions & { promptId?: string }) {
   return _streamText({
     model: getAnthropicModel(getAPIKey(env)),
-    system: getSystemPrompt(),
+    system: getSystemPrompt(options?.promptId),
     maxTokens: MAX_TOKENS,
     headers: {
       'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15',
