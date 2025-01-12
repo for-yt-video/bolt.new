@@ -4,31 +4,69 @@
 
 Bolt.new is an AI-powered web development agent that allows you to prompt, run, edit, and deploy full-stack applications directly from your browser—no local setup required. If you're here to build your own AI-powered web dev agent using the Bolt open source codebase, [click here to get started!](./CONTRIBUTING.md)
 
+## Milestones completed
+
+- [x] Add images to prompt
+- [x] Add model passthough via headers
+- [x] Add system prompt from json file
+- [x] Add downlaod as zip
+- [x] Add more option o nsidebar for chat items
+
+## Still Needed
+
+- [ ] Add a plugin system to add / remove (system prompt, llm provider, and tool provider)
+- [ ] Add github pull / push
+- [ ] Add load from local folder
+- [ ] Add sync to local folder
+- [ ] Add models load via json file along with api url
+- [ ] Add the ability to pass the system prompt though the headers
+- [ ] Add a test llm provider type for development testing
+- [ ] Super simple setting menu modal
+- [ ] In base chat add 2 dropdown (model, system prompt)
+
+## Goals for our fork
+
+- Keep with a minimal setup to reduce errors while developing the core codebase
+- Add a plugin system to the system prompt, llm provider, and tool provider
+
 ## What Makes Bolt.new Different
 
-Claude, v0, etc are incredible- but you can't install packages, run backends or edit code. That’s where Bolt.new stands out:
+Bolt.new combines cutting-edge AI with powerful development capabilities:
 
-- **Full-Stack in the Browser**: Bolt.new integrates cutting-edge AI models with an in-browser development environment powered by **StackBlitz’s WebContainers**. This allows you to:
-  - Install and run npm tools and libraries (like Vite, Next.js, and more)
-  - Run Node.js servers
-  - Interact with third-party APIs
-  - Deploy to production from chat
-  - Share your work via a URL
+- **Full-Stack Development in the Browser**: Powered by **StackBlitz's WebContainers**, Bolt.new provides:
+  - Complete Node.js environment
+  - Real-time package installation and management
+  - Live server execution
+  - Third-party API integration
+  - One-click deployments
+  - Instant project sharing
 
-- **AI with Environment Control**: Unlike traditional dev environments where the AI can only assist in code generation, Bolt.new gives AI models **complete control** over the entire  environment including the filesystem, node server, package manager, terminal, and browser console. This empowers AI agents to handle the entire app lifecycle—from creation to deployment.
+- **Modern Tech Stack**:
+  - Built with Remix and React
+  - Uses Vite for blazing-fast builds
+  - CodeMirror for powerful code editing
+  - Xterm.js for terminal emulation
+  - UnoCSS for atomic CSS utilities
+  - Cloudflare Pages for deployment
 
-Whether you’re an experienced developer, a PM or designer, Bolt.new allows you to build production-grade full-stack applications with ease.
+- **AI with Environment Control**: Unlike traditional AI coding assistants, Bolt.new gives AI models complete control over:
+  - File system operations
+  - Package management
+  - Terminal commands
+  - Server processes
+  - Browser interactions
+  - Deployment workflows
 
-For developers interested in building their own AI-powered development tools with WebContainers, check out the open-source Bolt codebase in this repo!
+## Tips for Best Results
 
-## Tips and Tricks
+1. **Be Specific About Requirements**: Mention your preferred frameworks, libraries, or tools (React, Vue, Tailwind, etc.) in your initial prompt.
 
-Here are some tips to get the most out of Bolt.new:
+2. **Start with Core Features**: Build your application's foundation first before adding complex functionality.
 
-- **Be specific about your stack**: If you want to use specific frameworks or libraries (like Astro, Tailwind, ShadCN, or any other popular JavaScript framework), mention them in your initial prompt to ensure Bolt scaffolds the project accordingly.
+3. **Use Clear Instructions**: Combine related tasks into single, well-structured prompts for efficiency.
 
-- **Use the enhance prompt icon**: Before sending your prompt, try clicking the 'enhance' icon to have the AI model help you refine your prompt, then edit the results before submitting.
+4. **Leverage the Enhance Feature**: Use the prompt enhancement tool to refine your instructions before sending.
 
-- **Scaffold the basics first, then add features**: Make sure the basic structure of your application is in place before diving into more advanced functionality. This helps Bolt understand the foundation of your project and ensure everything is wired up right before building out more advanced functionality.
+## Contributing
 
-- **Batch simple instructions**: Save time by combining simple instructions into one message. For example, you can ask Bolt to change the color scheme, add mobile responsiveness, and restart the dev server, all in one go saving you time and reducing API credit consumption significantly.
+Interested in building AI-powered development tools? Check out our [Contributing Guide](./CONTRIBUTING.md) to get started with the Bolt.new codebase.
