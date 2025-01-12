@@ -8,12 +8,12 @@ export const prompts: Record<string, SystemPrompt> = {
   minimal: loadPromptFromJSON(minimalPromptData),
 };
 
-export const getSystemPrompt = (promptId: string = 'default', cwd?: string): string => {
+export const getSystemPrompt = (promptId: string = 'default', cwd?: string, model?: string): string => {
   const prompt = prompts[promptId];
   if (!prompt) {
     throw new Error(`System prompt "${promptId}" not found`);
   }
-  return prompt.getPrompt(cwd);
+  return prompt.getPrompt(cwd, model);
 };
 
 export const getAvailablePrompts = (): Array<{ id: string; name: string; description: string }> => {
