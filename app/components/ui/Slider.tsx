@@ -1,65 +1,53 @@
-import { motion } from 'framer-motion';
+import type { ButtonHTMLAttributes } from 'react';
 import { memo } from 'react';
 import { classNames } from '~/utils/classNames';
-import { cubicEasingFn } from '~/utils/easings';
-import { genericMemo } from '~/utils/react';
 
-interface SliderOption<T> {
-  value: T;
-  text: string;
+export interface SliderOptions<T extends string> {
+  left: {
+    value: T;
+    text: string;
+  };
+  right: {
+    value: T;
+    text: string;
+  };
 }
 
-export interface SliderOptions<T> {
-  left: SliderOption<T>;
-  right: SliderOption<T>;
+interface SliderButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  selected?: boolean;
+  children: React.ReactNode | React.ReactNode[];
 }
 
-interface SliderProps<T> {
+export interface SliderProps<T extends string> {
   selected: T;
   options: SliderOptions<T>;
-  setSelected?: (selected: T) => void;
+  setSelected: (value: T) => void;
 }
 
-export const Slider = genericMemo(<T,>({ selected, options, setSelected }: SliderProps<T>) => {
-  const isLeftSelected = selected === options.left.value;
-
+const SliderButton = memo(({ selected, children, ...props }: SliderButtonProps) => {
   return (
-    <div className="flex items-center flex-wrap shrink-0 gap-1 bg-bolt-elements-background-depth-1 overflow-hidden rounded-full p-1">
-      <SliderButton selected={isLeftSelected} setSelected={() => setSelected?.(options.left.value)}>
-        {options.left.text}
-      </SliderButton>
-      <SliderButton selected={!isLeftSelected} setSelected={() => setSelected?.(options.right.value)}>
-        {options.right.text}
-      </SliderButton>
-    </div>
+    <button
+      type="button"
+      className={classNames(
+        'flex items-center gap-2 rounded-md px-2 py-1 text-bolt-text-primary transition-colors duration-200 hover:bg-bolt-elements-background-depth-1 active:bg-bolt-elements-background-depth-2 disabled:cursor-not-allowed disabled:opacity-50',
+        selected ? 'bg-bolt-elements-background-depth-1' : undefined,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
   );
 });
 
-interface SliderButtonProps {
-  selected: boolean;
-  children: string | JSX.Element | Array<JSX.Element | string>;
-  setSelected: () => void;
-}
-
-const SliderButton = memo(({ selected, children, setSelected }: SliderButtonProps) => {
+export const Slider = memo(<T extends string>({ selected, options, setSelected }: SliderProps<T>) => {
   return (
-    <button
-      onClick={setSelected}
-      className={classNames(
-        'bg-transparent text-sm px-2.5 py-0.5 rounded-full relative',
-        selected
-          ? 'text-bolt-elements-item-contentAccent'
-          : 'text-bolt-elements-item-contentDefault hover:text-bolt-elements-item-contentActive',
-      )}
-    >
-      <span className="relative z-10">{children}</span>
-      {selected && (
-        <motion.span
-          layoutId="pill-tab"
-          transition={{ duration: 0.2, ease: cubicEasingFn }}
-          className="absolute inset-0 z-0 bg-bolt-elements-item-backgroundAccent rounded-full"
-        ></motion.span>
-      )}
-    </button>
+    <div className="flex items-center gap-1">
+      <SliderButton selected={selected === options.left.value} onClick={() => setSelected(options.left.value)}>
+        {options.left.text}
+      </SliderButton>
+      <SliderButton selected={selected === options.right.value} onClick={() => setSelected(options.right.value)}>
+        {options.right.text}
+      </SliderButton>
+    </div>
   );
 });

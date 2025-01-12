@@ -1,10 +1,12 @@
 import { useStore } from '@nanostores/react';
+import type { FileSystemAPI } from '@webcontainer/api';
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
+import JSZip from 'jszip';
 import { computed } from 'nanostores';
 import { memo, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import JSZip from 'jszip';
-import type { FileSystemAPI } from '@webcontainer/api';
+import { EditorPanel } from './EditorPanel';
+import { Preview } from './Preview';
 import {
   type OnChangeCallback as OnEditorChange,
   type OnScrollCallback as OnEditorScroll,
@@ -13,14 +15,12 @@ import {
 import { IconButton } from '~/components/ui/IconButton';
 import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
 import { Slider, type SliderOptions } from '~/components/ui/Slider';
+import type { PreviewInfo } from '~/lib/stores/previews';
 import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
 import { webcontainer } from '~/lib/webcontainer';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
-import { EditorPanel } from './EditorPanel';
-import { Preview } from './Preview';
-import type { PreviewInfo } from '~/lib/stores/previews';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
@@ -124,7 +124,11 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
           <div className="absolute inset-0 px-6">
             <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
               <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
-                <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
+                <Slider
+                  selected={selectedView}
+                  options={sliderOptions}
+                  setSelected={setSelectedView as (value: string) => void}
+                />
                 <div className="ml-auto" />
                 {selectedView === 'code' && (
                   <>
@@ -144,22 +148,28 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                           const webcontainerInstance = await webcontainer;
                           const files = await webcontainerInstance.fs.readdir('/', { withFileTypes: true });
                           const zip = new JSZip();
-                          
-                          const processDirectory = async (dirPath: string, entries: Awaited<ReturnType<FileSystemAPI['readdir']>>) => {
+
+                          const processDirectory = async (
+                            dirPath: string,
+                            entries: Awaited<ReturnType<FileSystemAPI['readdir']>>,
+                          ) => {
                             for (const entry of entries) {
                               const fullPath = `${dirPath}/${entry.name}`;
+
                               if (entry.isFile()) {
                                 const content = await webcontainerInstance.fs.readFile(fullPath);
-                                zip.file(fullPath.slice(1), content); // Remove leading slash
+                                zip.file(fullPath.slice(1), content); // remove leading slash
                               } else if (entry.isDirectory() && entry.name !== 'node_modules') {
-                                const subEntries = await webcontainerInstance.fs.readdir(fullPath, { withFileTypes: true });
+                                const subEntries = await webcontainerInstance.fs.readdir(fullPath, {
+                                  withFileTypes: true,
+                                });
                                 await processDirectory(fullPath, subEntries);
                               }
                             }
                           };
 
                           await processDirectory('', files);
-                          
+
                           const blob = await zip.generateAsync({ type: 'blob' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
@@ -224,7 +234,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
 });
 
 interface ViewProps extends HTMLMotionProps<'div'> {
-  children: JSX.Element;
+  children: React.ReactElement;
 }
 
 const View = memo(({ children, ...props }: ViewProps) => {

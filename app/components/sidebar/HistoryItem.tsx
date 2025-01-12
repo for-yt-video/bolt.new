@@ -18,6 +18,7 @@ export function HistoryItem({ item, onDelete, onRename, onExport }: HistoryItemP
 
     function mouseEnter() {
       setHovering(true);
+
       if (timeout) {
         clearTimeout(timeout);
       }

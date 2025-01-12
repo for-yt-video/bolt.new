@@ -1,17 +1,16 @@
 import type { Message } from 'ai';
 import React, { type RefCallback } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
+import styles from './BaseChat.module.scss';
+import { Messages } from './Messages.client';
+import { SendButton } from './SendButton.client';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
-import { Messages } from './Messages.client';
-import { SendButton } from './SendButton.client';
-
-import styles from './BaseChat.module.scss';
 
 interface BaseChatProps {
-  textareaRef?: React.RefObject<HTMLTextAreaElement> | undefined;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null> | undefined;
   messageRef?: RefCallback<HTMLDivElement> | undefined;
   scrollRef?: RefCallback<HTMLDivElement> | undefined;
   showChat?: boolean;
@@ -152,6 +151,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   <div className="flex justify-between text-sm p-4 pt-2">
                     <div className="flex gap-1 items-center">
                       <IconButton
+                        icon="i-ph:sparkle"
                         title="Enhance prompt"
                         disabled={input.length === 0 || enhancingPrompt}
                         className={classNames({

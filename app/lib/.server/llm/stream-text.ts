@@ -1,14 +1,15 @@
 import { streamText as _streamText, convertToCoreMessages } from 'ai';
-import { getAPIKey } from '~/lib/.server/llm/api-key';
-import { getAnthropicModel } from '~/lib/.server/llm/model';
 import { MAX_TOKENS } from './constants';
 import { getSystemPrompt } from './prompts';
+import { getAPIKey } from '~/lib/.server/llm/api-key';
+import { getAnthropicModel } from '~/lib/.server/llm/model';
 
 interface ToolResult<Name extends string, Args, Result> {
   toolCallId: string;
   toolName: Name;
   args: Args;
   result: Result;
+  state: 'result';
 }
 
 interface Message {
