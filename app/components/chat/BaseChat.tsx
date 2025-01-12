@@ -1,6 +1,7 @@
 import type { Message } from 'ai';
-import React, { type RefCallback } from 'react';
+import React, { type RefCallback, useState } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
+import { toast } from 'react-toastify';
 import styles from './BaseChat.module.scss';
 import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
@@ -21,7 +22,7 @@ interface BaseChatProps {
   promptEnhanced?: boolean;
   input?: string;
   handleStop?: () => void;
-  sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
+  sendMessage?: (event: React.UIEvent, messageInput?: string, images?: File[]) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
 }
@@ -35,6 +36,57 @@ const EXAMPLE_PROMPTS = [
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
+
+const MAX_IMAGE_SIZE = 300; // Maximum width/height in pixels
+const JPEG_QUALITY = 0.6; // JPEG quality (0.0 to 1.0)
+
+async function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > height && width > MAX_IMAGE_SIZE) {
+        height = Math.round((height * MAX_IMAGE_SIZE) / width);
+        width = MAX_IMAGE_SIZE;
+      } else if (height > MAX_IMAGE_SIZE) {
+        width = Math.round((width * MAX_IMAGE_SIZE) / height);
+        height = MAX_IMAGE_SIZE;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Failed to compress image'));
+            return;
+          }
+          resolve(blob);
+        },
+        'image/jpeg',
+        JPEG_QUALITY
+      );
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
   (
@@ -57,6 +109,38 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+    const [selectedImages, setSelectedImages] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+
+    const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files || []);
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
+      
+      try {
+        // Compress images and convert to Files
+        const compressedImages = await Promise.all(
+          imageFiles.map(async (file) => {
+            const compressedBlob = await compressImage(file);
+            return new File([compressedBlob], file.name, { type: 'image/jpeg' });
+          })
+        );
+        
+        setSelectedImages(prev => [...prev, ...compressedImages]);
+        
+        // Create preview URLs for the compressed images
+        const newPreviewUrls = compressedImages.map(file => URL.createObjectURL(file));
+        setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+      } catch (error) {
+        console.error('Error compressing images:', error);
+        toast.error('Failed to process images');
+      }
+    };
+
+    const removeImage = (index: number) => {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index));
+      URL.revokeObjectURL(previewUrls[index]);
+      setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    };
 
     return (
       <div
@@ -107,6 +191,25 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     'shadow-sm border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden',
                   )}
                 >
+                  {selectedImages.length > 0 && (
+                    <div className="flex gap-2 p-4 overflow-x-auto">
+                      {previewUrls.map((url, index) => (
+                        <div key={index} className="relative">
+                          <img 
+                            src={url} 
+                            alt={`Preview ${index + 1}`} 
+                            className="h-20 w-20 object-cover rounded"
+                          />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-bolt-elements-background-depth-1 rounded-full p-1"
+                          >
+                            <div className="i-ph:x text-bolt-elements-textPrimary text-sm" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <textarea
                     ref={textareaRef}
                     className={`w-full pl-4 pt-4 pr-16 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent`}
@@ -118,7 +221,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
                         event.preventDefault();
 
-                        sendMessage?.(event);
+                        sendMessage?.(event, undefined, selectedImages);
+                        setSelectedImages([]);
+                        setPreviewUrls(prev => {
+                          prev.forEach(url => URL.revokeObjectURL(url));
+                          return [];
+                        });
                       }
                     }}
                     value={input}
@@ -132,24 +240,21 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     placeholder="How can Bolt help you today?"
                     translate="no"
                   />
-                  <ClientOnly>
-                    {() => (
-                      <SendButton
-                        show={input.length > 0 || isStreaming}
-                        isStreaming={isStreaming}
-                        onClick={(event) => {
-                          if (isStreaming) {
-                            handleStop?.();
-                            return;
-                          }
-
-                          sendMessage?.(event);
-                        }}
-                      />
-                    )}
-                  </ClientOnly>
                   <div className="flex justify-between text-sm p-4 pt-2">
-                    <div className="flex gap-1 items-center">
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="file"
+                        id="image-upload"
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                      />
+                      <IconButton
+                        icon="i-ph:image"
+                        title="Add images"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                      />
                       <IconButton
                         icon="i-ph:sparkle"
                         title="Enhance prompt"
@@ -168,12 +273,32 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           </>
                         ) : (
                           <>
-                            <div className="i-bolt:stars text-xl"></div>
                             {promptEnhanced && <div className="ml-1.5">Prompt enhanced</div>}
                           </>
                         )}
                       </IconButton>
                     </div>
+                    <ClientOnly>
+                      {() => (
+                        <SendButton
+                          show={input.length > 0 || selectedImages.length > 0 || isStreaming}
+                          isStreaming={isStreaming}
+                          onClick={(event) => {
+                            if (isStreaming) {
+                              handleStop?.();
+                              return;
+                            }
+
+                            sendMessage?.(event, undefined, selectedImages);
+                            setSelectedImages([]);
+                            setPreviewUrls(prev => {
+                              prev.forEach(url => URL.revokeObjectURL(url));
+                              return [];
+                            });
+                          }}
+                        />
+                      )}
+                    </ClientOnly>
                     {input.length > 3 ? (
                       <div className="text-xs text-bolt-elements-textTertiary">
                         Use <kbd className="kdb">Shift</kbd> + <kbd className="kdb">Return</kbd> for a new line
