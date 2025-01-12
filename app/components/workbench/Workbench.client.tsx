@@ -1,61 +1,22 @@
 import { useStore } from '@nanostores/react';
 import type { FileSystemAPI } from '@webcontainer/api';
-import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 import JSZip from 'jszip';
 import { computed } from 'nanostores';
 import { memo, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { EditorPanel } from './EditorPanel';
-import { Preview } from './Preview';
-import {
-  type OnChangeCallback as OnEditorChange,
-  type OnScrollCallback as OnEditorScroll,
-  type ScrollPosition,
-} from '~/components/editor/codemirror/CodeMirrorEditor';
-import { IconButton } from '~/components/ui/IconButton';
-import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
-import { Slider, type SliderOptions } from '~/components/ui/Slider';
+import { WorkbenchContent } from './WorkbenchContent';
+import { WorkbenchLayout } from './WorkbenchLayout';
+import { WorkbenchToolbar } from './WorkbenchToolbar';
+import type { OnChangeCallback as OnEditorChange, OnScrollCallback as OnEditorScroll, ScrollPosition } from '~/components/editor/codemirror/types';
 import type { PreviewInfo } from '~/lib/stores/previews';
-import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
+import { workbenchStore } from '~/lib/stores/workbench';
 import { webcontainer } from '~/lib/webcontainer';
-import { classNames } from '~/utils/classNames';
-import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
   isStreaming?: boolean;
 }
-
-const viewTransition = { ease: cubicEasingFn };
-
-const sliderOptions: SliderOptions<WorkbenchViewType> = {
-  left: {
-    value: 'code',
-    text: 'Code',
-  },
-  right: {
-    value: 'preview',
-    text: 'Preview',
-  },
-};
-
-const workbenchVariants = {
-  closed: {
-    width: 0,
-    transition: {
-      duration: 0.2,
-      ease: cubicEasingFn,
-    },
-  },
-  open: {
-    width: 'var(--workbench-width)',
-    transition: {
-      duration: 0.2,
-      ease: cubicEasingFn,
-    },
-  },
-} satisfies Variants;
 
 export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => {
   renderLogger.trace('Workbench');
@@ -67,8 +28,9 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   const unsavedFiles = useStore(workbenchStore.unsavedFiles);
   const files = useStore(workbenchStore.files);
   const selectedView = useStore(workbenchStore.currentView);
+  const previews = useStore(workbenchStore.previews);
 
-  const setSelectedView = (view: WorkbenchViewType) => {
+  const setSelectedView = (view: 'code' | 'preview') => {
     workbenchStore.currentView.set(view);
   };
 
@@ -104,143 +66,77 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     workbenchStore.resetCurrentDocument();
   }, []);
 
+  const onDownload = useCallback(async () => {
+    try {
+      const webcontainerInstance = await webcontainer;
+      const files = await webcontainerInstance.fs.readdir('/', { withFileTypes: true });
+      const zip = new JSZip();
+
+      const processDirectory = async (
+        dirPath: string,
+        entries: Awaited<ReturnType<FileSystemAPI['readdir']>>,
+      ) => {
+        for (const entry of entries) {
+          const fullPath = `${dirPath}/${entry.name}`;
+
+          if (entry.isFile()) {
+            const content = await webcontainerInstance.fs.readFile(fullPath);
+            zip.file(fullPath.slice(1), content); // remove leading slash
+          } else if (entry.isDirectory() && entry.name !== 'node_modules') {
+            const subEntries = await webcontainerInstance.fs.readdir(fullPath, {
+              withFileTypes: true,
+            });
+            await processDirectory(fullPath, subEntries);
+          }
+        }
+      };
+
+      await processDirectory('', files);
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'project.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Project downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download project:', error);
+      toast.error('Failed to download project');
+    }
+  }, []);
+
+  if (!chatStarted) {
+    return null;
+  }
+
   return (
-    chatStarted && (
-      <motion.div
-        initial="closed"
-        animate={showWorkbench ? 'open' : 'closed'}
-        variants={workbenchVariants}
-        className="z-workbench"
-      >
-        <div
-          className={classNames(
-            'fixed top-[calc(var(--header-height)+1.5rem)] bottom-6 w-[var(--workbench-inner-width)] mr-4 z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
-            {
-              'left-[var(--workbench-left)]': showWorkbench,
-              'left-[100%]': !showWorkbench,
-            },
-          )}
-        >
-          <div className="absolute inset-0 px-6">
-            <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-              <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
-                <Slider
-                  selected={selectedView}
-                  options={sliderOptions}
-                  setSelected={setSelectedView as (value: string) => void}
-                />
-                <div className="ml-auto" />
-                {selectedView === 'code' && (
-                  <>
-                    <PanelHeaderButton
-                      className="mr-1 text-sm"
-                      onClick={() => {
-                        workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                      }}
-                    >
-                      <div className="i-ph:terminal" />
-                      Toggle Terminal
-                    </PanelHeaderButton>
-                    <PanelHeaderButton
-                      className="mr-1 text-sm"
-                      onClick={async () => {
-                        try {
-                          const webcontainerInstance = await webcontainer;
-                          const files = await webcontainerInstance.fs.readdir('/', { withFileTypes: true });
-                          const zip = new JSZip();
-
-                          const processDirectory = async (
-                            dirPath: string,
-                            entries: Awaited<ReturnType<FileSystemAPI['readdir']>>,
-                          ) => {
-                            for (const entry of entries) {
-                              const fullPath = `${dirPath}/${entry.name}`;
-
-                              if (entry.isFile()) {
-                                const content = await webcontainerInstance.fs.readFile(fullPath);
-                                zip.file(fullPath.slice(1), content); // remove leading slash
-                              } else if (entry.isDirectory() && entry.name !== 'node_modules') {
-                                const subEntries = await webcontainerInstance.fs.readdir(fullPath, {
-                                  withFileTypes: true,
-                                });
-                                await processDirectory(fullPath, subEntries);
-                              }
-                            }
-                          };
-
-                          await processDirectory('', files);
-
-                          const blob = await zip.generateAsync({ type: 'blob' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = 'project.zip';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          URL.revokeObjectURL(url);
-                          toast.success('Project downloaded successfully');
-                        } catch (error) {
-                          console.error('Failed to download project:', error);
-                          toast.error('Failed to download project');
-                        }
-                      }}
-                    >
-                      <div className="i-ph:download" />
-                      Download Project
-                    </PanelHeaderButton>
-                  </>
-                )}
-                <IconButton
-                  icon="i-ph:x-circle"
-                  className="-mr-1"
-                  size="xl"
-                  onClick={() => {
-                    workbenchStore.showWorkbench.set(false);
-                  }}
-                />
-              </div>
-              <div className="relative flex-1 overflow-hidden">
-                <View
-                  initial={{ x: selectedView === 'code' ? 0 : '-100%' }}
-                  animate={{ x: selectedView === 'code' ? 0 : '-100%' }}
-                >
-                  <EditorPanel
-                    editorDocument={currentDocument}
-                    isStreaming={isStreaming}
-                    selectedFile={selectedFile}
-                    files={files}
-                    unsavedFiles={unsavedFiles}
-                    onFileSelect={onFileSelect}
-                    onEditorScroll={onEditorScroll}
-                    onEditorChange={onEditorChange}
-                    onFileSave={onFileSave}
-                    onFileReset={onFileReset}
-                  />
-                </View>
-                <View
-                  initial={{ x: selectedView === 'preview' ? 0 : '100%' }}
-                  animate={{ x: selectedView === 'preview' ? 0 : '100%' }}
-                >
-                  <Preview />
-                </View>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    )
-  );
-});
-
-interface ViewProps extends HTMLMotionProps<'div'> {
-  children: React.ReactElement;
-}
-
-const View = memo(({ children, ...props }: ViewProps) => {
-  return (
-    <motion.div className="absolute inset-0" transition={viewTransition} {...props}>
-      {children}
-    </motion.div>
+    <WorkbenchLayout isOpen={showWorkbench}>
+      <WorkbenchToolbar
+        selectedView={selectedView}
+        onViewChange={setSelectedView}
+        onSave={onFileSave}
+        onReset={onFileReset}
+        onDownload={onDownload}
+        isStreaming={isStreaming}
+      />
+      <WorkbenchContent
+        selectedView={selectedView}
+        currentDocument={currentDocument}
+        selectedFile={selectedFile}
+        files={files}
+        unsavedFiles={unsavedFiles}
+        preview={previews[0]}
+        isStreaming={isStreaming}
+        onFileSelect={onFileSelect}
+        onEditorChange={onEditorChange}
+        onEditorScroll={onEditorScroll}
+        onFileSave={onFileSave}
+        onFileReset={onFileReset}
+      />
+    </WorkbenchLayout>
   );
 });
