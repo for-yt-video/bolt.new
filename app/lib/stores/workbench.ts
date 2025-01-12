@@ -1,55 +1,50 @@
-import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from 'nanostores';
+import type { ReadableAtom } from 'nanostores';
 import { EditorStore } from './editor';
 import { FilesStore, type FileMap } from './files';
 import { PreviewsStore } from './previews';
 import { TerminalStore } from './terminal';
-import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
-import { ActionRunner } from '~/lib/runtime/action-runner';
+import { ArtifactStore, type ArtifactState, type ArtifactUpdateState } from './artifacts/ArtifactStore';
+import { DocumentStore } from './documents/DocumentStore';
+import { WorkbenchUIStore, type WorkbenchViewType } from './ui/WorkbenchUIStore';
+import type { EditorDocument } from '~/components/editor/codemirror/types';
 import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
 import { webcontainer } from '~/lib/webcontainer';
 import type { ITerminal } from '~/types/terminal';
-import { unreachable } from '~/utils/unreachable';
+import type { ScrollPosition } from '~/components/editor/codemirror/types';
 
-export interface ArtifactState {
-  id: string;
-  title: string;
-  closed: boolean;
-  runner: ActionRunner;
-}
-
-export type ArtifactUpdateState = Pick<ArtifactState, 'title' | 'closed'>;
-
-type Artifacts = MapStore<Record<string, ArtifactState>>;
-
-export type WorkbenchViewType = 'code' | 'preview';
+export { type WorkbenchViewType } from './ui/WorkbenchUIStore';
+export { type ArtifactState, type ArtifactUpdateState } from './artifacts/ArtifactStore';
 
 export class WorkbenchStore {
   #previewsStore = new PreviewsStore(webcontainer);
   #filesStore = new FilesStore(webcontainer);
   #editorStore = new EditorStore(this.#filesStore);
   #terminalStore = new TerminalStore(webcontainer);
+  #artifactStore = new ArtifactStore();
+  #documentStore = new DocumentStore(this.#filesStore, this.#editorStore);
+  #uiStore = new WorkbenchUIStore();
 
-  artifacts: Artifacts = import.meta.hot?.data.artifacts ?? map({});
+  constructor() {}
 
-  showWorkbench: WritableAtom<boolean> = import.meta.hot?.data.showWorkbench ?? atom(false);
-  currentView: WritableAtom<WorkbenchViewType> = import.meta.hot?.data.currentView ?? atom('code');
-  unsavedFiles: WritableAtom<Set<string>> = import.meta.hot?.data.unsavedFiles ?? atom(new Set<string>());
-  modifiedFiles = new Set<string>();
-  artifactIdList: string[] = [];
-
-  constructor() {
-    if (import.meta.hot) {
-      import.meta.hot.data.artifacts = this.artifacts;
-      import.meta.hot.data.unsavedFiles = this.unsavedFiles;
-      import.meta.hot.data.showWorkbench = this.showWorkbench;
-      import.meta.hot.data.currentView = this.currentView;
-    }
+  // UI-related getters and setters
+  get showWorkbench() {
+    return this.#uiStore.showWorkbench;
   }
 
+  get currentView() {
+    return this.#uiStore.currentView;
+  }
+
+  setShowWorkbench(show: boolean) {
+    this.#uiStore.setShowWorkbench(show);
+  }
+
+  // Preview-related getters
   get previews() {
     return this.#previewsStore.previews;
   }
 
+  // File and Document-related getters and setters
   get files() {
     return this.#filesStore.files;
   }
@@ -62,14 +57,55 @@ export class WorkbenchStore {
     return this.#editorStore.selectedFile;
   }
 
-  get firstArtifact(): ArtifactState | undefined {
-    return this.#getArtifact(this.artifactIdList[0]);
-  }
-
   get filesCount(): number {
     return this.#filesStore.filesCount;
   }
 
+  get unsavedFiles() {
+    return this.#documentStore.unsavedFiles;
+  }
+
+  setDocuments(files: FileMap) {
+    this.#documentStore.setDocuments(files);
+  }
+
+  setCurrentDocumentContent(newContent: string) {
+    this.#documentStore.setCurrentDocumentContent(newContent);
+  }
+
+  setCurrentDocumentScrollPosition(position: ScrollPosition) {
+    this.#documentStore.setCurrentDocumentScrollPosition(position);
+  }
+
+  setSelectedFile(filePath: string | undefined) {
+    this.#documentStore.setSelectedFile(filePath);
+  }
+
+  async saveFile(filePath: string) {
+    await this.#documentStore.saveFile(filePath);
+  }
+
+  async saveCurrentDocument() {
+    await this.#documentStore.saveCurrentDocument();
+  }
+
+  resetCurrentDocument() {
+    this.#documentStore.resetCurrentDocument();
+  }
+
+  async saveAllFiles() {
+    await this.#documentStore.saveAllFiles();
+  }
+
+  getFileModifcations() {
+    return this.#documentStore.getFileModifcations();
+  }
+
+  resetAllFileModifications() {
+    this.#documentStore.resetAllFileModifications();
+  }
+
+  // Terminal-related getters and methods
   get showTerminal() {
     return this.#terminalStore.showTerminal;
   }
@@ -86,190 +122,29 @@ export class WorkbenchStore {
     this.#terminalStore.onTerminalResize(cols, rows);
   }
 
-  setDocuments(files: FileMap) {
-    this.#editorStore.setDocuments(files);
-
-    if (this.#filesStore.filesCount > 0 && this.currentDocument.get() === undefined) {
-      // we find the first file and select it
-      for (const [filePath, dirent] of Object.entries(files)) {
-        if (dirent?.type === 'file') {
-          this.setSelectedFile(filePath);
-          break;
-        }
-      }
-    }
+  // Artifact-related getters and methods
+  get firstArtifact() {
+    return this.#artifactStore.firstArtifact;
   }
 
-  setShowWorkbench(show: boolean) {
-    this.showWorkbench.set(show);
+  get artifacts() {
+    return this.#artifactStore.artifacts;
   }
 
-  setCurrentDocumentContent(newContent: string) {
-    const filePath = this.currentDocument.get()?.filePath;
-
-    if (!filePath) {
-      return;
-    }
-
-    const originalContent = this.#filesStore.getFile(filePath)?.content;
-    const unsavedChanges = originalContent !== undefined && originalContent !== newContent;
-
-    this.#editorStore.updateFile(filePath, newContent);
-
-    const currentDocument = this.currentDocument.get();
-
-    if (currentDocument) {
-      const previousUnsavedFiles = this.unsavedFiles.get();
-
-      if (unsavedChanges && previousUnsavedFiles.has(currentDocument.filePath)) {
-        return;
-      }
-
-      const newUnsavedFiles = new Set(previousUnsavedFiles);
-
-      if (unsavedChanges) {
-        newUnsavedFiles.add(currentDocument.filePath);
-      } else {
-        newUnsavedFiles.delete(currentDocument.filePath);
-      }
-
-      this.unsavedFiles.set(newUnsavedFiles);
-    }
+  addArtifact(data: ArtifactCallbackData) {
+    this.#artifactStore.addArtifact(data);
   }
 
-  setCurrentDocumentScrollPosition(position: ScrollPosition) {
-    const editorDocument = this.currentDocument.get();
-
-    if (!editorDocument) {
-      return;
-    }
-
-    const { filePath } = editorDocument;
-
-    this.#editorStore.updateScrollPosition(filePath, position);
-  }
-
-  setSelectedFile(filePath: string | undefined) {
-    this.#editorStore.setSelectedFile(filePath);
-  }
-
-  async saveFile(filePath: string) {
-    const documents = this.#editorStore.documents.get();
-    const document = documents[filePath];
-
-    if (document === undefined) {
-      return;
-    }
-
-    await this.#filesStore.saveFile(filePath, document.value);
-
-    const newUnsavedFiles = new Set(this.unsavedFiles.get());
-    newUnsavedFiles.delete(filePath);
-
-    this.unsavedFiles.set(newUnsavedFiles);
-  }
-
-  async saveCurrentDocument() {
-    const currentDocument = this.currentDocument.get();
-
-    if (currentDocument === undefined) {
-      return;
-    }
-
-    await this.saveFile(currentDocument.filePath);
-  }
-
-  resetCurrentDocument() {
-    const currentDocument = this.currentDocument.get();
-
-    if (currentDocument === undefined) {
-      return;
-    }
-
-    const { filePath } = currentDocument;
-    const file = this.#filesStore.getFile(filePath);
-
-    if (!file) {
-      return;
-    }
-
-    this.setCurrentDocumentContent(file.content);
-  }
-
-  async saveAllFiles() {
-    for (const filePath of this.unsavedFiles.get()) {
-      await this.saveFile(filePath);
-    }
-  }
-
-  getFileModifcations() {
-    return this.#filesStore.getFileModifications();
-  }
-
-  resetAllFileModifications() {
-    this.#filesStore.resetFileModifications();
-  }
-
-  abortAllActions() {
-    // TODO: what do we wanna do and how do we wanna recover from this?
-  }
-
-  addArtifact({ messageId, title, id }: ArtifactCallbackData) {
-    const artifact = this.#getArtifact(messageId);
-
-    if (artifact) {
-      return;
-    }
-
-    if (!this.artifactIdList.includes(messageId)) {
-      this.artifactIdList.push(messageId);
-    }
-
-    this.artifacts.setKey(messageId, {
-      id,
-      title,
-      closed: false,
-      runner: new ActionRunner(webcontainer),
-    });
-  }
-
-  updateArtifact({ messageId }: ArtifactCallbackData, state: Partial<ArtifactUpdateState>) {
-    const artifact = this.#getArtifact(messageId);
-
-    if (!artifact) {
-      return;
-    }
-
-    this.artifacts.setKey(messageId, { ...artifact, ...state });
+  updateArtifact(data: ArtifactCallbackData, state: Partial<ArtifactUpdateState>) {
+    this.#artifactStore.updateArtifact(data, state);
   }
 
   async addAction(data: ActionCallbackData) {
-    const { messageId } = data;
-
-    const artifact = this.#getArtifact(messageId);
-
-    if (!artifact) {
-      unreachable('Artifact not found');
-    }
-
-    artifact.runner.addAction(data);
+    await this.#artifactStore.addAction(data);
   }
 
   async runAction(data: ActionCallbackData) {
-    const { messageId } = data;
-
-    const artifact = this.#getArtifact(messageId);
-
-    if (!artifact) {
-      unreachable('Artifact not found');
-    }
-
-    artifact.runner.runAction(data);
-  }
-
-  #getArtifact(id: string) {
-    const artifacts = this.artifacts.get();
-    return artifacts[id];
+    await this.#artifactStore.runAction(data);
   }
 }
 

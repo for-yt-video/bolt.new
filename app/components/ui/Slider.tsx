@@ -6,10 +6,12 @@ export interface SliderOptions<T extends string> {
   left: {
     value: T;
     text: string;
+    icon?: string;
   };
   right: {
     value: T;
     text: string;
+    icon?: string;
   };
 }
 
@@ -43,9 +45,11 @@ export const Slider = memo(<T extends string>({ selected, options, setSelected }
   return (
     <div className="flex items-center gap-1">
       <SliderButton selected={selected === options.left.value} onClick={() => setSelected(options.left.value)}>
+        {options.left.icon && <div className={options.left.icon} />}
         {options.left.text}
       </SliderButton>
       <SliderButton selected={selected === options.right.value} onClick={() => setSelected(options.right.value)}>
+        {options.right.icon && <div className={options.right.icon} />}
         {options.right.text}
       </SliderButton>
     </div>
