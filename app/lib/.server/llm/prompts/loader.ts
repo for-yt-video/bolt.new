@@ -12,12 +12,13 @@ export function loadPromptFromJSON(data: PromptData): SystemPrompt {
   return {
     name: data.name,
     description: data.description,
-    getPrompt: (cwd?: string) => {
+    getPrompt: (cwd?: string, model?: string) => {
       // Replace template variables
       return data.content
         .replace('{allowedHTMLElements}', allowedHTMLElements.map((tagName) => `<${tagName}>`).join(', '))
         .replace('{MODIFICATIONS_TAG_NAME}', MODIFICATIONS_TAG_NAME)
-        .replace('{cwd}', cwd || '');
+        .replace('{cwd}', cwd || '')
+        .replace('{model}', model || '');
     },
   };
 } 
