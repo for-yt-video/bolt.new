@@ -30,6 +30,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
         },
       ],
       context.cloudflare.env,
+      { promptId: 'minimal' }
     );
 
     const transformStream = new TransformStream({
