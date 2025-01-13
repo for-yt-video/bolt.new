@@ -26,6 +26,7 @@ interface BaseChatProps {
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
   onSystemPromptChange?: (promptId: string) => void;
+  onModelChange?: (modelId: string) => void;
 }
 
 const EXAMPLE_PROMPTS = [
@@ -41,6 +42,11 @@ const SYSTEM_PROMPTS = [
   { id: 'minimal', name: 'Minimal', description: 'A minimal system prompt for simple tasks' },
   { id: 'pirate', name: 'Pirate', description: 'A swashbuckling variant that speaks like a pirate' },
   { id: 'baby-yoda', name: 'Baby Yoda', description: 'A cute and wise variant that speaks like Baby Yoda/Grogu' },
+];
+
+const MODELS = [
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
@@ -114,6 +120,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       enhancePrompt,
       handleStop,
       onSystemPromptChange,
+      onModelChange,
     },
     ref,
   ) => {
@@ -121,6 +128,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [selectedPrompt, setSelectedPrompt] = useState('default');
+    const [selectedModel, setSelectedModel] = useState('claude-3-5-sonnet-20241022');
 
     const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
@@ -265,20 +273,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         title="Add images"
                         onClick={() => document.getElementById('image-upload')?.click()}
                       />
-                      <select
-                        value={selectedPrompt}
-                        onChange={(e) => {
-                          setSelectedPrompt(e.target.value);
-                          onSystemPromptChange?.(e.target.value);
-                        }}
-                        className="bg-transparent border border-bolt-elements-borderColor rounded-md px-2 py-1 text-bolt-elements-textPrimary focus:outline-none focus:border-bolt-elements-borderColorActive"
-                      >
-                        {SYSTEM_PROMPTS.map((prompt) => (
-                          <option key={prompt.id} value={prompt.id} title={prompt.description}>
-                            {prompt.name}
-                          </option>
-                        ))}
-                      </select>
                       <IconButton
                         icon="i-ph:sparkle"
                         title="Enhance prompt"
@@ -301,6 +295,34 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           </>
                         )}
                       </IconButton>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => {
+                          setSelectedModel(e.target.value);
+                          onModelChange?.(e.target.value);
+                        }}
+                        className="bg-transparent border border-bolt-elements-borderColor rounded-md px-2 py-1 text-bolt-elements-textPrimary focus:outline-none focus:border-bolt-elements-borderColorActive"
+                      >
+                        {MODELS.map((model) => (
+                          <option key={model.id} value={model.id} className="bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary">
+                            {model.name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={selectedPrompt}
+                        onChange={(e) => {
+                          setSelectedPrompt(e.target.value);
+                          onSystemPromptChange?.(e.target.value);
+                        }}
+                        className="bg-transparent border border-bolt-elements-borderColor rounded-md px-2 py-1 text-bolt-elements-textPrimary focus:outline-none focus:border-bolt-elements-borderColorActive"
+                      >
+                        {SYSTEM_PROMPTS.map((prompt) => (
+                          <option key={prompt.id} value={prompt.id} title={prompt.description} className="bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary">
+                            {prompt.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <ClientOnly>
                       {() => (
