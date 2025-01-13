@@ -25,6 +25,7 @@ interface BaseChatProps {
   sendMessage?: (event: React.UIEvent, messageInput?: string, images?: File[]) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
+  onSystemPromptChange?: (promptId: string) => void;
 }
 
 const EXAMPLE_PROMPTS = [
@@ -33,6 +34,13 @@ const EXAMPLE_PROMPTS = [
   { text: 'Create a cookie consent form using Material UI' },
   { text: 'Make a space invaders game' },
   { text: 'How do I center a div?' },
+];
+
+const SYSTEM_PROMPTS = [
+  { id: 'default', name: 'Default', description: 'The default system prompt for Bolt with full capabilities' },
+  { id: 'minimal', name: 'Minimal', description: 'A minimal system prompt for simple tasks' },
+  { id: 'pirate', name: 'Pirate', description: 'A swashbuckling variant that speaks like a pirate' },
+  { id: 'baby-yoda', name: 'Baby Yoda', description: 'A cute and wise variant that speaks like Baby Yoda/Grogu' },
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
@@ -105,12 +113,14 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       handleInputChange,
       enhancePrompt,
       handleStop,
+      onSystemPromptChange,
     },
     ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    const [selectedPrompt, setSelectedPrompt] = useState('default');
 
     const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
@@ -255,6 +265,20 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         title="Add images"
                         onClick={() => document.getElementById('image-upload')?.click()}
                       />
+                      <select
+                        value={selectedPrompt}
+                        onChange={(e) => {
+                          setSelectedPrompt(e.target.value);
+                          onSystemPromptChange?.(e.target.value);
+                        }}
+                        className="bg-transparent border border-bolt-elements-borderColor rounded-md px-2 py-1 text-bolt-elements-textPrimary focus:outline-none focus:border-bolt-elements-borderColorActive"
+                      >
+                        {SYSTEM_PROMPTS.map((prompt) => (
+                          <option key={prompt.id} value={prompt.id} title={prompt.description}>
+                            {prompt.name}
+                          </option>
+                        ))}
+                      </select>
                       <IconButton
                         icon="i-ph:sparkle"
                         title="Enhance prompt"

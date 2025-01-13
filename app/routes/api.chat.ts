@@ -1,6 +1,5 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS } from '~/lib/.server/llm/constants';
-import { CONTINUE_PROMPT } from '~/lib/.server/llm/prompts';
 import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 
@@ -10,13 +9,15 @@ export async function action(args: ActionFunctionArgs) {
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
   const { messages } = await request.json<{ messages: Messages }>();
+  const promptId = request.headers.get('x-system-prompt');
 
   const stream = new SwitchableStream();
 
   try {
     const options: StreamingOptions = {
       toolChoice: 'none',
-      onFinish: async ({ text: content, finishReason }) => {
+      promptId: promptId || undefined,
+      onFinish: async ({ text: content, finishReason }: { text: string; finishReason: string }) => {
         if (finishReason !== 'length') {
           return stream.close();
         }
@@ -30,7 +31,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         console.log(`Reached max token limit (${MAX_TOKENS}): Continuing message (${switchesLeft} switches left)`);
 
         messages.push({ role: 'assistant', content });
-        messages.push({ role: 'user', content: CONTINUE_PROMPT });
+        messages.push({ role: 'user', content: 'Please continue.' });
 
         const result = await streamText(messages, context.cloudflare.env, options);
 

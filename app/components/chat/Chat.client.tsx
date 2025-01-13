@@ -68,6 +68,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [systemPrompt, setSystemPrompt] = useState('default');
 
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
 
@@ -77,6 +78,9 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
     api: '/api/chat',
+    headers: {
+      'x-system-prompt': systemPrompt,
+    },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
       toast.error('There was an error processing your request');
@@ -238,6 +242,9 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
           setInput(input);
           scrollTextArea();
         });
+      }}
+      onSystemPromptChange={(promptId) => {
+        setSystemPrompt(promptId);
       }}
     />
   );

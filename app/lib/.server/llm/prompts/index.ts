@@ -1,11 +1,15 @@
 import defaultPromptData from './data/default.json';
 import minimalPromptData from './data/minimal.json';
+import piratePromptData from './data/pirate.json';
+import babyYodaPromptData from './data/baby-yoda.json';
 import { loadPromptFromJSON } from './loader';
 import type { SystemPrompt } from './types';
 
 export const prompts: Record<string, SystemPrompt> = {
   default: loadPromptFromJSON(defaultPromptData),
   minimal: loadPromptFromJSON(minimalPromptData),
+  pirate: loadPromptFromJSON(piratePromptData),
+  'baby-yoda': loadPromptFromJSON(babyYodaPromptData),
 };
 
 export const getSystemPrompt = (promptId: string = 'default', cwd?: string, model?: string): string => {
