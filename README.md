@@ -32,7 +32,7 @@ Bolt.new is an AI-powered web development agent that allows you to prompt, run, 
 - Keep with a minimal setup to reduce errors while developing the core codebase
 - Add a plugin system to the system prompt, llm provider, and tool provider (this will reduce codebase that we have to maintain)
 
-## What Makes Bolt.new Different
+## What Makes This Different
 
 Bolt.new combines cutting-edge AI with powerful development capabilities:
 
