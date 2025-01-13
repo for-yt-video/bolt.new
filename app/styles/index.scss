@@ -11,4 +11,82 @@ html,
 body {
   height: 100%;
   width: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Add smooth scrolling behavior
+* {
+  scroll-behavior: smooth;
+}
+
+// Enhance button styles
+button {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Add subtle shadows to cards and elevated elements
+[class*="card"],
+[class*="elevated"] {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}
+
+// Improve input field styles
+input,
+textarea,
+select {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bolt-elements-borderColorActive);
+  }
+}
+
+// Add subtle animations for interactive elements
+[class*="interactive"] {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Improve scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bolt-elements-bg-depth-2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bolt-elements-bg-depth-3);
+  border-radius: 4px;
+  
+  &:hover {
+    background: var(--bolt-elements-bg-depth-4);
+  }
 }
